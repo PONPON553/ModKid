@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-    <head>
+<!doctype html>
+<html lang="uk">
+<head>
         <meta charset="UTF-8" />
 
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -24,11 +25,11 @@
             <a href="index.html" class="logo"> Mod<span>Kid</span> </a>
 
             <nav class="nav">
-                <a href="index.html"> Головна </a>
-                <a href="mods.html" class="active"> Моди </a>
-                <a href="plugins.html"> Плагіни </a>
-                <a href="favorites.html"> Збережено <span aria-hidden="true">♥</span> </a>
-                <a href="#contacts"> Контакти </a>
+                <a href="index.html">Головна</a>
+                <a href="mods.html" class="active">Моди</a>
+                <a href="plugins.html">Плагіни</a>
+                <a href="favorites.html" class="nav-favorites">Збережено <span aria-hidden="true">♥</span></a>
+                <a href="#contacts">Контакти</a>
             </nav>
 
             <a href="#contacts" class="header-button"> Приєднатися </a>
@@ -60,6 +61,21 @@
 
                         <button class="filter" data-filter="pvp">PvP</button>
                     </div>
+                </div>
+
+                <div class="catalog-tools" aria-label="Пошук та сортування модів">
+                    <label class="catalog-search">
+                        <span aria-hidden="true">⌕</span>
+                        <input id="catalog-search" type="search" aria-label="Знайти мод за назвою або описом" placeholder="Знайти мод за назвою або описом" autocomplete="off" />
+                    </label>
+                    <label class="catalog-sort-label" for="catalog-sort">Сортування</label>
+                    <select id="catalog-sort" class="catalog-sort">
+                        <option value="name-asc">За назвою: А—Я</option>
+                        <option value="name-desc">За назвою: Я—А</option>
+                    </select>
+                    <button class="saved-filter" type="button" aria-pressed="false">♡ Лише збережені</button>
+                    <a class="mods-saved-link" href="mods-favorites.html">Мої збережені моди ☆</a>
+                    <span class="catalog-count" aria-live="polite"></span>
                 </div>
 
                 <div class="catalog-grid">
@@ -307,29 +323,6 @@
             </div>
         </footer>
 
-        <script>
-            const filters = document.querySelectorAll('.filter');
-            const cards = document.querySelectorAll('.catalog-card');
-
-            filters.forEach((filter) => {
-                filter.addEventListener('click', () => {
-                    filters.forEach((button) => {
-                        button.classList.remove('active');
-                    });
-
-                    filter.classList.add('active');
-
-                    const category = filter.dataset.filter;
-
-                    cards.forEach((card) => {
-                        if (category === 'all' || card.dataset.category === category) {
-                            card.style.display = '';
-                        } else {
-                            card.style.display = 'none';
-                        }
-                    });
-                });
-            });
-        </script>
+        <script src="script.js"></script>
     </body>
 </html>

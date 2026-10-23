@@ -1,54 +1,69 @@
 (() => {
-    const STORAGE_KEY = "modkid-favorites";
+    const STORAGE_KEYS = { mods: "modkid-mod-favorites", plugins: "modkid-plugin-favorites" };
+    const pagePath = location.pathname.toLowerCase();
+    const pageType = pagePath.includes("mods-favorites.html") || pagePath.includes("mods.html")
+        ? "mods"
+        : location.pathname.toLowerCase().includes("favorites.html") ? "all" : "plugins";
     let activeCategory = "all";
     let savedOnly = false;
 
-    function readFavorites() {
+    function readFavorites(type = pageType) {
         try {
-            const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+            if (type === "all") return [...readFavorites("mods"), ...readFavorites("plugins")];
+            const saved = localStorage.getItem(STORAGE_KEYS[type]);
+            const legacy = type === "mods" ? localStorage.getItem("modkid-favorites") : null;
+            const value = JSON.parse(saved || legacy || "[]");
             return Array.isArray(value) ? value : [];
         } catch {
             return [];
         }
     }
 
-    function writeFavorites(favorites) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
+    function writeFavorites(favorites, type = pageType) {
+        localStorage.setItem(STORAGE_KEYS[type], JSON.stringify(favorites));
+    }
+
+    function getCardType(card) {
+        if (card.dataset.favoriteType) return card.dataset.favoriteType;
+        if (card.classList.contains("game-card")) return "mods";
+        if (card.classList.contains("plugin-card")) return "plugins";
+        return pageType === "all" ? "mods" : pageType;
     }
 
     function getCardData(card) {
         const title = card.querySelector("h3")?.textContent.trim();
-        const image = card.querySelector(".catalog-image")?.getAttribute("src");
-        const description = card.querySelector(".catalog-body p")?.textContent.trim() || "";
-        const link = card.querySelector(".catalog-body a")?.getAttribute("href") || "#";
-        const tag = card.querySelector(".card-tag")?.textContent.trim() || "МОД";
+        const image = card.querySelector(".catalog-image, .card-image")?.getAttribute("src");
+        const description = card.querySelector(".catalog-body p, .card-body p")?.textContent.trim() || "";
+        const link = card.querySelector(".catalog-body a, .card-body a, a")?.getAttribute("href") || "#";
+        const tag = card.querySelector(".card-tag")?.textContent.trim() || (getCardType(card) === "mods" ? "МОД" : "ПЛАГІН");
         const id = card.dataset.id || title?.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-");
-        return id && title ? { id, title, image, description, link, tag } : null;
+        return id && title ? { id, type: getCardType(card), title, image, description, link, tag } : null;
     }
 
     function refreshLikeButtons() {
-        const favorites = new Set(readFavorites().map((item) => item.id));
-        document.querySelectorAll(".catalog-card[data-id]").forEach((card) => {
+        document.querySelectorAll(".catalog-card[data-id], .game-card[data-id], .plugin-card[data-id]").forEach((card) => {
             const button = card.querySelector(".like-btn");
             if (!button) return;
-            const liked = favorites.has(card.dataset.id);
+            const type = getCardType(card);
+            const liked = readFavorites(type).some((item) => item.id === card.dataset.id);
             button.classList.toggle("is-liked", liked);
             button.setAttribute("aria-pressed", String(liked));
             button.setAttribute("aria-label", liked ? "Прибрати зі збереженого" : "Додати до збереженого");
-            button.textContent = liked ? "♥" : "♡";
+            button.textContent = type === "mods" ? (liked ? "★" : "☆") : (liked ? "♥" : "♡");
         });
     }
 
     function displayFavorites() {
         const grid = document.getElementById("favorites-grid");
         if (!grid) return;
-        const favorites = readFavorites();
+        const type = document.getElementById("favorites-grid")?.dataset.favoritesType || "all";
+        const favorites = readFavorites(type);
         if (!favorites.length) {
-            grid.innerHTML = '<p class="empty-favorites">Тут поки порожньо. Натисни ♡ на картці моду, щоб зберегти його.</p>';
+            grid.innerHTML = `<p class="empty-favorites">Тут поки порожньо. Натисни ${type === "mods" ? "☆" : "♡"} на картці, щоб зберегти її.</p>`;
             return;
         }
         grid.innerHTML = favorites.map((item) => `
-            <article class="catalog-card favorite-card" data-id="${escapeHtml(item.id)}">
+            <article class="catalog-card favorite-card" data-id="${escapeHtml(item.id)}" data-favorite-type="${escapeHtml(item.type || "mods")}">
                 ${item.image ? `<img class="catalog-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" loading="lazy">` : ""}
                 <div class="catalog-body">
                     <span class="card-tag">${escapeHtml(item.tag)}</span>
@@ -56,7 +71,7 @@
                     <p>${escapeHtml(item.description)}</p>
                     <div class="card-actions">
                         <a class="blue-button" href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer">Відкрити</a>
-                        <button class="like-btn is-liked" type="button" data-remove-favorite="${escapeHtml(item.id)}" aria-label="Прибрати зі збереженого" aria-pressed="true">♥</button>
+                        <button class="like-btn is-liked" type="button" data-remove-favorite="${escapeHtml(item.id)}" data-favorite-type="${escapeHtml(item.type || "mods")}" aria-label="Прибрати зі збереженого" aria-pressed="true">${item.type === "mods" ? "★" : "♥"}</button>
                     </div>
                 </div>
             </article>`).join("");
@@ -71,9 +86,9 @@
     function toggleFavorite(card) {
         const item = getCardData(card);
         if (!item) return;
-        const favorites = readFavorites();
+        const favorites = readFavorites(getCardType(card));
         const exists = favorites.some((favorite) => favorite.id === item.id);
-        writeFavorites(exists ? favorites.filter((favorite) => favorite.id !== item.id) : [...favorites, item]);
+        writeFavorites(exists ? favorites.filter((favorite) => favorite.id !== item.id) : [...favorites, item], item.type);
         refreshLikeButtons();
         applyCatalogControls();
     }
@@ -118,7 +133,8 @@
         if (savedButton) {
             savedButton.classList.toggle("active", savedOnly);
             savedButton.setAttribute("aria-pressed", String(savedOnly));
-            savedButton.textContent = savedOnly ? "♥ Показати всі" : "♡ Лише збережені";
+            const icon = pageType === "mods" ? "★" : "♥";
+            savedButton.textContent = savedOnly ? `${icon} Показати всі` : `${icon} Лише збережені`;
         }
     }
 
@@ -126,10 +142,11 @@
         const likeButton = event.target.closest(".like-btn");
         if (likeButton) {
             if (likeButton.dataset.removeFavorite) {
-                writeFavorites(readFavorites().filter((item) => item.id !== likeButton.dataset.removeFavorite));
+                const type = likeButton.dataset.favoriteType || "mods";
+                writeFavorites(readFavorites(type).filter((item) => item.id !== likeButton.dataset.removeFavorite), type);
                 displayFavorites();
             } else {
-                const card = likeButton.closest(".catalog-card");
+                const card = likeButton.closest(".catalog-card, .game-card, .plugin-card");
                 if (card?.dataset.id) toggleFavorite(card);
             }
         }
@@ -154,23 +171,59 @@
         if (event.target.matches("#catalog-sort")) applyCatalogControls();
     });
 
+    function initializePageMotion() {
+        const revealTargets = document.querySelectorAll(
+            ".catalog-card, .game-card, .plugin-card, .page-title, .section-heading, .contacts, .newsletter"
+        );
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        if (!reduceMotion && "IntersectionObserver" in window) {
+            const observer = new IntersectionObserver((entries, currentObserver) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add("is-visible");
+                        currentObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12 });
+            revealTargets.forEach((element) => {
+                element.classList.add("scroll-reveal");
+                observer.observe(element);
+            });
+        }
+
+        const backToTop = document.createElement("button");
+        backToTop.className = "back-to-top";
+        backToTop.type = "button";
+        backToTop.setAttribute("aria-label", "Повернутися нагору");
+        backToTop.title = "Нагору";
+        backToTop.textContent = "↑";
+        document.body.append(backToTop);
+
+        const updateBackToTop = () => backToTop.classList.toggle("is-visible", window.scrollY > 420);
+        window.addEventListener("scroll", updateBackToTop, { passive: true });
+        updateBackToTop();
+        backToTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
-        document.querySelectorAll(".catalog-card").forEach((card) => {
+        initializePageMotion();
+        document.querySelectorAll(".catalog-card, .game-card, .plugin-card").forEach((card) => {
             const title = card.querySelector("h3")?.textContent.trim();
             if (!card.dataset.id && title) {
                 card.dataset.id = title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
             }
             if (!card.querySelector(".like-btn")) {
-                const link = card.querySelector(".catalog-body a");
+                const link = card.querySelector(".catalog-body a, .card-body a, a");
                 const actions = document.createElement("div");
                 actions.className = "card-actions";
                 if (link) actions.append(link);
                 const button = document.createElement("button");
                 button.className = "like-btn";
                 button.type = "button";
-                button.textContent = "♡";
+                button.textContent = pageType === "mods" ? "☆" : "♡";
                 actions.append(button);
-                card.querySelector(".catalog-body")?.append(actions);
+                (card.querySelector(".catalog-body, .card-body") || card).append(actions);
             }
         });
         refreshLikeButtons();

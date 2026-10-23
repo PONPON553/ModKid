@@ -35,6 +35,7 @@
 html {
 
     scroll-behavior: smooth;
+    scroll-padding-top: 90px;
 
 }
 
@@ -152,7 +153,7 @@ button {
 
     font-weight: 500;
 
-    transition: .25s;
+    transition: color .25s ease, opacity .25s ease;
 
 }
 
@@ -1395,7 +1396,9 @@ body {
 .nav a { font-size: 17px; }
 .header { gap: 20px; }
 .header-button { white-space: nowrap; font-size: 16px; }
-.nav-favorites span { color: var(--yellow); }
+.nav-favorites span { color: #00e676; }
+.mods-saved-link { color: var(--text); text-decoration: none; align-self: center; font-size: 14px; white-space: nowrap; }
+.mods-saved-link:hover { color: var(--yellow); }
 .catalog-card[hidden] { display: none !important; }
 .catalog-tools {
     display: flex;
@@ -1461,6 +1464,36 @@ body {
 .like-btn:hover, .like-btn.is-liked { color: #ff526a; border-color: #ff526a; background: rgba(255,82,106,.12); }
 .empty-favorites { grid-column: 1 / -1; padding: 32px; color: var(--muted); background: var(--dark-card); border: 1px solid var(--border); border-radius: 8px; line-height: 1.7; }
 .favorite-card .catalog-body p { min-height: 65px; }
+
+.scroll-reveal { opacity: 0; transform: translateY(18px); transition: opacity .55s ease, transform .55s ease; }
+.scroll-reveal.is-visible { opacity: 1; transform: translateY(0); }
+.back-to-top {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 120;
+    width: 46px;
+    height: 46px;
+    border: 1px solid var(--yellow);
+    border-radius: 50%;
+    background: rgba(8, 11, 17, .92);
+    color: var(--yellow);
+    font-size: 25px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    transition: opacity .2s ease, transform .2s ease, visibility .2s ease, background .2s ease;
+}
+.back-to-top.is-visible { opacity: 1; visibility: visible; transform: translateY(0); }
+.back-to-top:hover { background: var(--yellow); color: var(--black); }
+
+:focus-visible { outline: 2px solid var(--yellow-light); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    .scroll-reveal { opacity: 1; transform: none; }
+}
 
 @media (max-width: 1050px) {
     .header { flex-wrap: wrap; justify-content: center; padding-top: 14px; padding-bottom: 14px; }
